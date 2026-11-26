@@ -1,0 +1,1 @@
+window.NIQ_CFG={api:'APPS_SCRIPT_WEB_APP_URL'};
