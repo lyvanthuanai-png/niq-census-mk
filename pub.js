@@ -14,7 +14,11 @@ const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 let encP=null;const enc=()=>encP||(encP=fetch('stores.enc.json',{cache:'no-cache'}).then(r=>r.json()));
 async function decrypt(code){const e=await enc();
   const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(code),'PBKDF2',false,['deriveKey']);
-  const key=await crypto.subtle.deriveKey({name:'PBKDF2',salt:b64(e.salt),iterations:e.iter,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['decrypt']);
+  const kdf=salt=>crypto.subtle.deriveKey({name:'PBKDF2',salt:b64(salt),iterations:e.iter,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['decrypt']);
+  let key;
+  if(e.slots){let dek=null;for(const sl of e.slots){try{dek=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(sl.iv)},await kdf(sl.salt),b64(sl.wk));break}catch(x){}}
+    if(!dek)throw new Error('bad_code');key=await crypto.subtle.importKey('raw',dek,'AES-GCM',false,['decrypt'])}
+  else key=await kdf(e.salt);
   const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(e.iv)},key,b64(e.ct));
   return JSON.parse(new TextDecoder().decode(pt))}
 
