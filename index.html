@@ -164,11 +164,13 @@ tr.bad td.v{color:var(--bad);font-weight:600}
 .donebar{position:sticky;bottom:0;z-index:5;background:var(--bg);border-top:1px solid var(--line);margin-top:14px;padding:10px 0 calc(10px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;align-items:center;flex-wrap:wrap}.donebar .primary{font:inherit;font-weight:600;background:var(--ok);color:#fff;border:0;border-radius:8px;padding:10px 18px;cursor:pointer}.donebar.done b{color:var(--ok)}.donebar .ghost{font:inherit;background:transparent;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:8px 12px;cursor:pointer}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}.seg button{font:inherit;font-size:13px;border:0;border-right:1px solid var(--line);background:var(--bg);color:var(--fg);padding:6px 10px;cursor:pointer;white-space:nowrap}.seg button:last-child{border-right:0}.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg);font-weight:600}@media (max-width:820px){.seg{order:-1;width:100%}.seg button{flex:1;padding:9px 4px}}
 .idwrap{position:relative;flex:0 1 190px;min-width:0}#qid{width:100%;font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)}#idres{position:absolute;left:0;right:0;top:calc(100% + 4px);background:var(--bg);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);max-height:50vh;overflow:auto;z-index:2001}#idres button{display:block;width:100%;text-align:left;padding:8px 10px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--fg);font:inherit;cursor:pointer}#idres .g{color:var(--muted);font-size:11px;display:block}#idres .h{padding:8px 10px;color:var(--muted);font-size:12px}@media (max-width:820px){.idwrap{order:-1;flex:1 1 100%}#qid{padding:9px}}
+#svIn{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);width:150px}#svIn.need{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 25%,transparent)}@media (max-width:820px){#svIn{order:-1;flex:1 1 100%;width:auto;padding:9px}}
 #gate{position:fixed;inset:0;z-index:9000;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px}#gate form{width:100%;max-width:360px;display:flex;flex-direction:column;gap:10px}#gate h1{margin:0 0 4px;font-size:22px}#gate h1 span{color:var(--accent)}#gate input{font:inherit;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)}#gate button{font:inherit;padding:12px;border:0;border-radius:8px;background:var(--fg);color:var(--bg);font-weight:600}#gMsg{min-height:1.2em;color:var(--muted);font-size:13px}#gate[hidden]{display:none}
 </style>
 
 <header>
   <div class="brand">NIQ <span>Census</span> MK</div>
+  <input id="svIn" list="svList" autocomplete="off" placeholder="👤 Người khảo sát" aria-label="Tên người khảo sát"><datalist id="svList"><option value="Thuận"><option value="Phi"></datalist>
   <div class="seg" id="wSeg" role="group" aria-label="Lọc nhanh theo xã"><button data-w="" aria-pressed="true">Tất cả</button><button data-w="TAN KHANH TRUNG" aria-pressed="false">Tân Khánh Trung</button><button data-w="__rest" aria-pressed="false">Phần còn lại</button></div>
   <select id="fWard" aria-label="Lọc theo xã"><option value="">Tất cả xã</option></select>
   <select id="fType" aria-label="Lọc theo loại hình"><option value="">Tất cả loại hình</option></select>
@@ -282,7 +284,7 @@ let colFilter=null; // {i, q}
 function storeMatchesCol(s,f){const v=s.L[f.i];if(v==null)return false;return !f.q||colKey[f.i].includes(f.q)||norm(v).includes(f.q)}
 function visible(s){const w=$('fWard').value,t=$('fType').value,r=$('fRev').value,st=(REV[s.id]||{}).st||'';
   return (!w||(w==='__rest'?s.ward!=='TAN KHANH TRUNG':s.ward===w))&&(!t||s.type===t)&&(!r||(r==='_none'?!st:st===r))&&(!colFilter||(colFilter.store?colFilter.ids.has(s.id):storeMatchesCol(s,colFilter)))}
-function apply(){syncSeg();let v=0;S.forEach(s=>{if(visible(s)){mk[s.id].addTo(map);v++}else mk[s.id].remove()});
+function apply(){syncSeg();svSeen();let v=0;S.forEach(s=>{if(visible(s)){mk[s.id].addTo(map);v++}else mk[s.id].remove()});
   const n=S.filter(s=>(REV[s.id]||{}).st).length;const nn=syncNew();$('stat').textContent=`Hiển thị ${v}/${S.length} · Đã đánh giá ${n}`+(nn?` · CH mới ${nn}`:'');
   if(location.hash==='#tong-ket')renderSum()}
 ['fWard','fType','fRev'].forEach(id=>$(id).onchange=apply);
@@ -342,7 +344,7 @@ function auds(ids){return (ids||[]).map((a,k)=>`<div class="aud"><span class="sm
 function doneBar(id){const r=REV[id]||{};
   return r.done?`<div class="donebar done" id="doneBar"><b>✓ Đã hoàn tất</b><span class="small" id="doneWho">${esc(r.doneAt||'')}</span><button class="ghost" data-done="0">Mở lại để sửa</button></div>`
     :`<div class="donebar" id="doneBar"><button class="primary" data-done="1">✓ Hoàn tất cửa hàng này</button><span class="small">Mọi thay đổi đã tự lưu. Bấm để đánh dấu đã làm xong.</span></div>`}
-function fillDoneWho(id){const r=REV[id]||{};if(!r.done||!r.doneBy)return;nameOf(r.doneBy).then(n=>{const el=$('doneWho');if(el&&cur===id&&n)el.textContent=n+' · '+(r.doneAt||'')})}
+function fillDoneWho(id){const r=REV[id]||{};if(!r.done||!(r.doneBy||r.doneSv))return;(r.doneSv?Promise.resolve(r.doneSv):nameOf(r.doneBy)).then(n=>{const el=$('doneWho');if(el&&cur===id&&n)el.textContent=n+' · '+(r.doneAt||'')})}
 function show(id,fly){
   if(String(id).startsWith('n_'))return showNew(id,fly);
   const s=byId[id];if(!s)return;cur=id;placing=null;const r=REV[id]||{};
@@ -373,7 +375,7 @@ function show(id,fly){
   h+=doneBar(id);const panel=$('panel');panel.innerHTML=h;panel.scrollTop=0;fillDoneWho(id);
   if(matchMedia('(max-width:820px)').matches)panel.scrollIntoView({block:'start'});
   renderLines(s,hl);
-  if(r.by)nameOf(r.by).then(n=>{const e=$('gby');if(e&&cur===id)e.textContent=`Cập nhật: ${n} · ${r.at||''}`});
+  if(r.by||r.sv)whoOf(r).then(n=>{const e=$('gby');if(e&&cur===id)e.textContent=`Cập nhật: ${n} · ${r.at||''}`});
   panel.querySelectorAll('.st').forEach(b=>b.onclick=()=>{const k=b.dataset.k;const nr={...(REV[id]||{}),st:(REV[id]||{}).st===k?'':k};stamp(nr);
     panel.querySelectorAll('.st').forEach(x=>x.setAttribute('aria-pressed',x.dataset.k===nr.st));
     mk[id].setStyle({fillColor:colorOf(nr.st)});writeDoc('reviews',id,nr).then(apply);apply()});
@@ -383,7 +385,11 @@ function show(id,fly){
   panel.querySelectorAll('.sb').forEach(b=>b.onclick=()=>{secF=b.dataset.sec;panel.querySelectorAll('.sb').forEach(x=>x.setAttribute('aria-pressed',x.dataset.sec===secF));renderLines(s,hl)});
   if(hl){const tr=panel.querySelector(`tr[data-i="${hl}"]`);if(tr)tr.scrollIntoView({block:'center'})}
 }
-function stamp(o){o.by=me||'';o.at=new Date().toLocaleString('vi-VN')}
+function stamp(o){o.by=me||'';o.sv=SV||'';o.at=new Date().toLocaleString('vi-VN');if(!SV&&!svWarned){svWarned=true;$('svIn').classList.add('need');toast('Nhập tên người khảo sát ở ô 👤 trên cùng để ghi nhận ai làm.')}}
+let SV='',svWarned=false;try{SV=localStorage.getItem('niqmk_sv')||''}catch(e){}
+$('svIn').value=SV;$('svIn').addEventListener('input',()=>{SV=$('svIn').value.trim();$('svIn').classList.toggle('need',!SV);try{localStorage.setItem('niqmk_sv',SV)}catch(e){}});
+async function whoOf(x){return (x&&x.sv)||await nameOf(x&&x.by)}
+function svSeen(){const l=$('svList'),have=new Set([...l.options].map(o=>o.value));[...Object.values(REV),...Object.values(ANS)].forEach(x=>{if(x&&x.sv&&!have.has(x.sv)){have.add(x.sv);l.append(new Option(x.sv,x.sv))}})}
 function renderLines(s,hl){
   const q=norm(lineQ.trim());let g='',sec=null,h='',n=0;
   const rank=c=>({1:0,2:1,0:2}[c[4]||0]);
@@ -412,7 +418,7 @@ function renderLines(s,hl){
 let camTarget=null;
 $('panel').addEventListener('click',async e=>{
   const dn=e.target.closest('[data-done]');if(dn&&cur){const sid=cur,nr={...(REV[sid]||{})};const on=dn.dataset.done==='1';
-    nr.done=on;if(on){nr.doneBy=me||'';nr.doneAt=new Date().toLocaleString('vi-VN')}stamp(nr);await writeDoc('reviews',sid,nr);
+    nr.done=on;if(on){nr.doneBy=me||'';nr.doneSv=SV||'';nr.doneAt=new Date().toLocaleString('vi-VN')}stamp(nr);await writeDoc('reviews',sid,nr);
     const b=$('doneBar');if(b&&cur===sid){b.outerHTML=doneBar(sid);fillDoneWho(sid)}
     if(on)toast(canWrite?'Đã lưu và đánh dấu hoàn tất. Chọn cửa hàng tiếp theo trên bản đồ.':'Chưa lưu được: bạn chỉ có quyền xem.');else toast('Đã mở lại, sửa tiếp được.');apply();return}
   const cam=e.target.closest('[data-cam]');
@@ -526,7 +532,7 @@ function showNew(id,fly){
   h+=doneBar(id);const panel=$('panel');panel.innerHTML=h;panel.scrollTop=0;fillDoneWho(id);
   if(matchMedia('(max-width:820px)').matches)panel.scrollIntoView({block:'start'});
   renderNewLines(id);
-  if(r.by)nameOf(r.by).then(n=>{const e=$('gby');if(e&&cur===id)e.textContent=`Cập nhật: ${n} · ${r.at||''}`});
+  if(r.by||r.sv)whoOf(r).then(n=>{const e=$('gby');if(e&&cur===id)e.textContent=`Cập nhật: ${n} · ${r.at||''}`});
   let tm={};panel.querySelectorAll('[data-f]').forEach(inp=>{const ev=inp.tagName==='SELECT'?'change':'input';inp.addEventListener(ev,()=>{const k=inp.dataset.f;clearTimeout(tm[k]);tm[k]=setTimeout(()=>{saveNew(id,{[k]:inp.value});if(k==='name')panel.querySelector('h2.sn').textContent='➕ '+(inp.value||'Cửa hàng mới')},500)})});
   let gT;$('gnote').oninput=e=>{clearTimeout(gT);const v=e.target.value;gT=setTimeout(()=>saveNew(id,{note:v}),600)};
   $('nMe').onclick=()=>{if(!meLL){toast('Chưa có vị trí của bạn. Bấm "📍 Vị trí của tôi" trên cùng để dán toạ độ trước.');askPaste();return}saveNew(id,{lat:+meLL[0].toFixed(6),lon:+meLL[1].toFixed(6)});showNew(id,true)};
@@ -604,7 +610,11 @@ async function renderSum(){
   const A=Object.values(ANS).filter(a=>byId[a.s]);
   const ok=A.filter(a=>a.e==='ok').length,bad=A.filter(a=>a.e==='bad').length;
   const photos=Object.values(REV).reduce((n,r)=>n+(r.ph||[]).length,0)+A.reduce((n,a)=>n+(a.ph||[]).length,0);
-  const people=new Set([...Object.values(REV),...A].map(x=>x.by).filter(Boolean));
+  const people=new Set([...Object.values(REV),...A].map(x=>x.sv||x.by).filter(Boolean));
+  const svName=x=>x.sv||names[x.by]||'(chưa ghi tên)';const svm={};
+  done.forEach(s=>{const n=svName(REV[s.id]);(svm[n]=svm[n]||{st:0,ln:0,bad:0,dn:0}).st++;if(REV[s.id].done)svm[n].dn++});
+  A.forEach(a=>{const n=svName(a);const o=svm[n]=svm[n]||{st:0,ln:0,bad:0,dn:0};o.ln++;if(a.e==='bad')o.bad++});
+  const svRows=Object.entries(svm).sort((x,y)=>y[1].st-x[1].st).map(([n,o])=>`<tr><td>${esc(n)}</td><td>${o.st}</td><td>${o.dn}</td><td>${o.ln}</td><td>${o.bad}</td></tr>`).join('');
   const byS=k=>done.filter(s=>REV[s.id].st===k).length;
   const kcol={ok:colorOf('ok'),part:colorOf('part'),nf:colorOf('nf'),closed:colorOf('closed')};
   // per ward
@@ -650,6 +660,7 @@ async function renderSum(){
    <div><h3>Độ đúng theo nhóm câu</h3><div class="tablewrap"><table class="mini"><thead><tr><th>Nhóm</th><th>Dòng check</th><th>Sai</th><th>% sai</th></tr></thead><tbody>
     ${[[1,SEC[1]],[2,SEC[2]],[0,SEC[0]]].map(([k,t])=>`<tr><td>${t}</td><td>${cat[k].ok+cat[k].bad}</td><td>${cat[k].bad}</td><td>${pct(cat[k].bad,cat[k].ok+cat[k].bad)}</td></tr>`).join('')}</tbody></table></div></div>
   </div>
+  <section><h3>Theo người khảo sát</h3>${svRows?`<div class="tablewrap"><table class="mini"><thead><tr><th>Người khảo sát</th><th>CH đánh giá chung</th><th>CH bấm Hoàn tất</th><th>Dòng câu đã nhập</th><th>Dòng sai</th></tr></thead><tbody>${svRows}</tbody></table></div>`:'<p class="small">Chưa có.</p>'}</section>
   <section><h3>Câu hỏi bị đánh sai nhiều nhất</h3>${qRows?`<div class="tablewrap"><table class="mini"><thead><tr><th>Câu hỏi</th><th>Lượt check</th><th>Sai</th><th>Tỷ lệ</th></tr></thead><tbody>${qRows}</tbody></table></div>`:'<p class="small">Chưa có dòng nào được đánh ✓/✗.</p>'}</section>
   <section><h3>Cửa hàng có vấn đề <span class="small" style="text-transform:none">(bấm để mở trên bản đồ)</span></h3>${iRows?`<div class="tablewrap"><table class="mini"><thead><tr><th>Cửa hàng</th><th>Đánh giá chung</th><th>Số dòng sai</th><th>Ghi chú</th></tr></thead><tbody>${iRows}</tbody></table></div>`:'<p class="small">Chưa có cửa hàng nào bị đánh sai lệch, không tìm thấy hay đóng cửa.</p>'}</section>
   <section><h3>Dữ liệu NIQ khu vực này (để đối chiếu)</h3>
@@ -676,12 +687,12 @@ $('bExp').onclick=async()=>{
   const out=[['Response ID','Batch','Tên CH','Xã','Loại hình','Lat','Lon','Đánh giá chung','Ghi chú chung','Số ảnh CH','Nhóm câu hỏi','Mục','Kết quả NIQ','Đánh giá dòng','Giá trị thực tế','Số ảnh dòng','Người cập nhật','Thời gian']];
   ids.forEach(id=>{const s=byId[id];if(!s)return;const r=REV[id]||{};const base=[s.id,s.b,s.name,s.ward,s.type,s.lat,s.lon,ST[r.st]||'',r.note||'',(r.ph||[]).length];
     const ls=Object.values(ANS).filter(a=>a.s===id).sort((a,b)=>a.c-b.c);
-    if(!ls.length)out.push(base.concat(['','','','','','',names[r.by]||'',r.at||'']));
-    ls.forEach(a=>{const c=C[a.c]||['','',''];out.push(base.concat([c[0],c[1]||c[2],s.L[a.c]||'',a.e==='ok'?'Đúng':a.e==='bad'?'Sai':'',a.n||'',(a.ph||[]).length,names[a.by]||'',a.at||'']))})});
+    if(!ls.length)out.push(base.concat(['','','','','','',(r.sv||names[r.by]||''),r.at||'']));
+    ls.forEach(a=>{const c=C[a.c]||['','',''];out.push(base.concat([c[0],c[1]||c[2],s.L[a.c]||'',a.e==='ok'?'Đúng':a.e==='bad'?'Sai':'',a.n||'',(a.ph||[]).length,(a.sv||names[a.by]||''),a.at||'']))})});
   newIds().forEach(id=>{const r=REV[id],s=nsObj(id);const base=[id,'CH mới',s.name,'',s.type,s.lat,s.lon,'CH mới (ngoài NIQ) · chủ: '+(r.owner||'')+' · SĐT: '+(r.phone||'')+' · ĐC: '+(r.addr||''),r.note||'',(r.ph||[]).length];
     const ls=Object.values(ANS).filter(a=>a.s===id).sort((a,b)=>a.c-b.c);
-    if(!ls.length)out.push(base.concat(['','','','','',(r.au||[]).length?'ghi âm: '+r.au.length:'',names[r.by]||'',r.at||'']));
-    ls.forEach(a=>{const c=C[a.c]||['','',''];out.push(base.concat([c[0],c[1]||c[2],'','',a.n||'',(a.ph||[]).length,names[a.by]||'',a.at||'']))})});
+    if(!ls.length)out.push(base.concat(['','','','','',(r.au||[]).length?'ghi âm: '+r.au.length:'',(r.sv||names[r.by]||''),r.at||'']));
+    ls.forEach(a=>{const c=C[a.c]||['','',''];out.push(base.concat([c[0],c[1]||c[2],'','',a.n||'',(a.ph||[]).length,(a.sv||names[a.by]||''),a.at||'']))})});
   const csv='﻿'+out.map(r=>r.map(q).join(',')).join('\n');const fn='NIQ_Census_MK_LapVo_danh-gia_'+new Date().toISOString().slice(0,10)+'.csv';
   const dl=window.claude?await claude.use('downloads'):null;
   if(dl){try{await dl.save({filename:fn,data:new Blob([csv],{type:'text/csv'})})}catch(e){if(e&&e.code!=='cancelled')toast('Không lưu được file.')}}
