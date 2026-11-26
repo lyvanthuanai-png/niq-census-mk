@@ -50,7 +50,7 @@ async function poll(){if(polling)return;polling=true;
     PUB.online=true}
   catch(e){PUB.online=false;PUB.onErr&&PUB.onErr(e)}
   finally{polling=false;clearTimeout(pollT);pollT=setTimeout(poll,document.hidden?60000:15000)}}
-document.addEventListener('visibilitychange',()=>{if(!document.hidden){clearTimeout(pollT);poll()}});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&PUB.code&&Object.keys(listeners).length){clearTimeout(pollT);poll()}});
 PUB.db={collection(col){return{
   doc(id){return{
     async set(data){await api('set',{col,id,data})},
