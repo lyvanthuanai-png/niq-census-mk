@@ -9,17 +9,17 @@
 /* Layout: field tool — map left, store detail + review right; stacks on phone */
 :root{
   --bg:#ffffff;--fg:#14181f;--muted:#5f6b7a;--line:#e3e6eb;--soft:#f5f6f8;--group:#fdf1f1;--groupfg:#8a1c1c;
-  --accent:#d71920;--ok:#15803d;--bad:#c62828;--warn:#b45309;--nf:#6d28d9;--none:#2563eb;
+  --accent:#d71920;--ok:#15803d;--bad:#c62828;--warn:#b45309;--nf:#6d28d9;--none:#2563eb;--today:#db2777;--yday:#4b5563;
   --land:#f3f1ea;--road:#ffffff;--roadcase:#c9c4b6;--major:#f4c76b;--water:#a9cfe8;--label:#3b4250;--hit:#fff4bf;
   --font:-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#12151a;--fg:#e8eaee;--muted:#9aa4b2;--line:#2a2f37;--soft:#1a1e24;--group:#2a1717;--groupfg:#f2b8b8;
-  --accent:#ff4a50;--ok:#34c26a;--bad:#ff6b6b;--warn:#f0a43a;--nf:#a78bfa;--none:#60a5fa;
+  --accent:#ff4a50;--ok:#34c26a;--bad:#ff6b6b;--warn:#f0a43a;--nf:#a78bfa;--none:#60a5fa;--today:#f472b6;--yday:#9ca3af;
   --land:#1b1f24;--road:#3a414b;--roadcase:#2a2f37;--major:#8a6a2c;--water:#24435c;--label:#c3cad4;--hit:#4a3f12;color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#12151a;--fg:#e8eaee;--muted:#9aa4b2;--line:#2a2f37;--soft:#1a1e24;--group:#2a1717;--groupfg:#f2b8b8;
-  --accent:#ff4a50;--ok:#34c26a;--bad:#ff6b6b;--warn:#f0a43a;--nf:#a78bfa;--none:#60a5fa;
+  --accent:#ff4a50;--ok:#34c26a;--bad:#ff6b6b;--warn:#f0a43a;--nf:#a78bfa;--none:#60a5fa;--today:#f472b6;--yday:#9ca3af;
   --land:#1b1f24;--road:#3a414b;--roadcase:#2a2f37;--major:#8a6a2c;--water:#24435c;--label:#c3cad4;--hit:#4a3f12;color-scheme:dark}
 [hidden]{display:none!important}
 html,body{height:100%}
@@ -128,6 +128,9 @@ tr.bad td.v{color:var(--bad);font-weight:600}
 .plabel{color:var(--label);font-size:11px;font-weight:600;white-space:nowrap;text-shadow:0 0 3px var(--land),0 0 3px var(--land);pointer-events:none;width:auto!important;height:auto!important}
 .plabel.small{font-weight:500;font-size:10px;opacity:.85}
 #map.z-lo .plabel.small{display:none}
+.slabel{font-size:11px;font-weight:600;white-space:nowrap;color:var(--fg);text-shadow:0 0 3px var(--bg),0 0 3px var(--bg),0 0 2px var(--bg);pointer-events:none;width:auto!important;height:auto!important;margin:-7px 0 0 9px!important}
+.slabel.td{color:var(--today)}
+#map.z-lo .slabel{font-size:10px}
 .nfg{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
 .nf{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--muted);min-width:0}
 .nf input,.nf select{padding:7px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);font-size:14px;min-width:0}
@@ -223,7 +226,7 @@ const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim
 const colorOf=k=>css({ok:'--ok',part:'--warn',nf:'--bad',closed:'--nf'}[k]||'--none');
 let toastT;const toast=m=>{const t=$('toast');t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2600)};
 
-$('legend').innerHTML=Object.entries(ST).map(([k,v])=>`<span><i class="dot" style="background:${colorOf(k)}"></i>${v}</span>`).join('')+`<span><i class="dot" style="background:${colorOf('')}"></i>Chưa đánh giá</span><span><i class="dot" style="background:${css('--fg')};box-shadow:0 0 0 2px ${css('--accent')}"></i>CH mới thêm</span>`;
+$('legend').innerHTML=Object.entries(ST).map(([k,v])=>`<span><i class="dot" style="background:${colorOf(k)}"></i>${v}</span>`).join('')+`<span><i class="dot" style="background:${css('--today')}"></i>Hôm nay đã đi</span><span><i class="dot" style="background:${css('--yday')}"></i>Đã làm 26/11 (22 CH)</span><span><i class="dot" style="background:${colorOf('')}"></i>Chưa đánh giá</span><span><i class="dot" style="background:${css('--fg')};box-shadow:0 0 0 2px ${css('--accent')}"></i>CH mới thêm</span>`;
 const LEG=$('legend').innerHTML;
 
 /* ---------- data ---------- */
@@ -272,7 +275,21 @@ S.forEach(s=>{mk[s.id]=L.circleMarker([s.lat,s.lon],{renderer:rend,radius:6.5,we
 map.fitBounds(L.latLngBounds(S.map(s=>[s.lat,s.lon])),{padding:[20,20]});
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{drawBase();recolor()});
 new MutationObserver(()=>{drawBase();recolor()}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
-function recolor(){S.forEach(s=>mk[s.id].setStyle({fillColor:colorOf((REV[s.id]||{}).st)}))}
+/* stores surveyed on 26/11 (merged Claude + web CSV results) */
+const DONE_PREV=new Set(['88497183','88497747','88497806','88498059','88556755','88556812','88556852','88558373','88608997','88609043','88609115','88611701','88611712','88611738','88673449','88673579','88673696','88673998','88674235','88676195','88694133','88697636']);
+const dmy=d=>[d.getDate(),d.getMonth()+1,d.getFullYear()].join('/');
+const isToday=at=>{const m=String(at||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);return !!m&&[+m[1],+m[2],+m[3]].join('/')===dmy(new Date())};
+function todaySet(){const t=new Set();Object.entries(REV).forEach(([id,r])=>{if(r&&isToday(r.at))t.add(id)});Object.values(ANS).forEach(a=>{if(a&&a.s&&isToday(a.at))t.add(String(a.s))});return t}
+function fillOf(id,T){if(T.has(id))return css('--today');if(DONE_PREV.has(id))return css('--yday');return colorOf((REV[id]||{}).st)}
+const lbl={};
+function recolor(){const T=todaySet();S.forEach(s=>{const id=String(s.id);mk[s.id].setStyle({fillColor:fillOf(id,T)});
+  const want=(T.has(id)||DONE_PREV.has(id))&&map.hasLayer(mk[s.id]);
+  if(want){const cls='slabel'+(T.has(id)?' td':'');
+    if(!lbl[id])lbl[id]=L.marker([s.lat,s.lon],{interactive:false,keyboard:false,icon:L.divIcon({className:cls,html:esc(s.name||'(không tên)'),iconSize:null,iconAnchor:[0,0]})});
+    else if(lbl[id].options.icon.options.className!==cls)lbl[id].setIcon(L.divIcon({className:cls,html:esc(s.name||'(không tên)'),iconSize:null,iconAnchor:[0,0]}));
+    lbl[id].addTo(map)}
+  else if(lbl[id])lbl[id].remove()});
+  return T}
 
 /* ---------- filters ---------- */
 [...new Set(S.map(s=>s.ward))].sort().forEach(w=>$('fWard').add(new Option(w,w)));$('fWard').add(new Option('Phần còn lại (trừ Tân Khánh Trung)','__rest'));
@@ -285,7 +302,7 @@ function storeMatchesCol(s,f){const v=s.L[f.i];if(v==null)return false;return !f
 function visible(s){const w=$('fWard').value,t=$('fType').value,r=$('fRev').value,st=(REV[s.id]||{}).st||'';
   return (!w||(w==='__rest'?s.ward!=='TAN KHANH TRUNG':s.ward===w))&&(!t||s.type===t)&&(!r||(r==='_none'?!st:st===r))&&(!colFilter||(colFilter.store?colFilter.ids.has(s.id):storeMatchesCol(s,colFilter)))}
 function apply(){syncSeg();svSeen();let v=0;S.forEach(s=>{if(visible(s)){mk[s.id].addTo(map);v++}else mk[s.id].remove()});
-  const n=S.filter(s=>(REV[s.id]||{}).st).length;const nn=syncNew();$('stat').textContent=`Hiển thị ${v}/${S.length} · Đã đánh giá ${n}`+(nn?` · CH mới ${nn}`:'');
+  const T=recolor();const nT=S.filter(s=>T.has(String(s.id))).length;const nn=syncNew();$('stat').textContent=`Hiển thị ${v}/${S.length} · Hôm nay ${nT} · 26/11: ${DONE_PREV.size}`+(nn?` · CH mới ${nn}`:'');
   if(location.hash==='#tong-ket')renderSum()}
 ['fWard','fType','fRev'].forEach(id=>$(id).onchange=apply);
 
@@ -378,7 +395,7 @@ function show(id,fly){
   if(r.by||r.sv)whoOf(r).then(n=>{const e=$('gby');if(e&&cur===id)e.textContent=`Cập nhật: ${n} · ${r.at||''}`});
   panel.querySelectorAll('.st').forEach(b=>b.onclick=()=>{const k=b.dataset.k;const nr={...(REV[id]||{}),st:(REV[id]||{}).st===k?'':k};stamp(nr);
     panel.querySelectorAll('.st').forEach(x=>x.setAttribute('aria-pressed',x.dataset.k===nr.st));
-    mk[id].setStyle({fillColor:colorOf(nr.st)});writeDoc('reviews',id,nr).then(apply);apply()});
+    writeDoc('reviews',id,nr).then(apply);apply()});
   let gT;$('gnote').oninput=e=>{clearTimeout(gT);const v=e.target.value;gT=setTimeout(()=>{const nr={...(REV[id]||{}),note:v};stamp(nr);writeDoc('reviews',id,nr)},600)};
   $('lq').oninput=e=>{lineQ=e.target.value;renderLines(s,hl)};
   $('onlyHit').onchange=e=>{onlyHit=e.target.checked;renderLines(s,hl)};
@@ -714,8 +731,7 @@ let first={r:true,a:true};const timer=setTimeout(()=>{if(first.r)$('stat').textC
 const sub=(col,obj,key)=>db.collection(col).onSnapshot(snap=>{
   clearTimeout(timer);const changed=new Set();
   snap.docChanges().forEach(ch=>{if(ch.type==='removed')delete obj[ch.doc.id];else obj[ch.doc.id]={...ch.doc.data()};changed.add(col==='reviews'?ch.doc.id:(obj[ch.doc.id]||{}).s||ch.doc.id.slice(0,ch.doc.id.lastIndexOf('_')))});
-  if(col==='reviews')changed.forEach(id=>mk[id]&&mk[id].setStyle({fillColor:colorOf((REV[id]||{}).st)}));
-  apply();
+    apply();
   if(cur&&changed.has(cur)&&!document.activeElement.closest('#panel input,#panel textarea'))show(cur);
   first[key]=false},err=>{toast('Mất kết nối đánh giá chung. Tải lại trang.')});
 sub('reviews',REV,'r');sub('answers',ANS,'a');
